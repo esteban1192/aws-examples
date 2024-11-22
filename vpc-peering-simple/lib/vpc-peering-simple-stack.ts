@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
-import { Fn } from 'aws-cdk-lib';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 export class VpcPeeringSimpleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -26,8 +26,8 @@ export class VpcPeeringSimpleStack extends cdk.Stack {
 
     const databaseSubnetGroup = this.createRdsSubnetGroup('VPC2PrivateSubnetGroup', vpc2, vpc2IsolatedSubnets);
 
+    const databaseInstance = this.createRdsInstance('MySQLRDS', vpc2, dbSecurityGroup, databaseSubnetGroup);
     this.createEc2Instance('EC2Instance', vpc1, publicSubnet, instanceSecurityGroup);
-    this.createRdsInstance('MySQLRDS', vpc2, dbSecurityGroup, databaseSubnetGroup);
 
     new cdk.CfnOutput(this, 'Vpc1Id', { value: vpc1.vpcId });
     new cdk.CfnOutput(this, 'Vpc2Id', { value: vpc2.vpcId });
@@ -128,7 +128,14 @@ export class VpcPeeringSimpleStack extends cdk.Stack {
   }
 
   private createRdsInstance(id: string, vpc: ec2.Vpc, securityGroup: ec2.SecurityGroup, subnetGroup: rds.SubnetGroup) {
-    new rds.DatabaseInstance(this, id, {
+    const dbCredentials = new secretsmanager.Secret(this, 'RdsCredentials', {
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ username: 'admin' }),
+        generateStringKey: 'password',
+        excludeCharacters: '"@/\\',
+      },
+    });
+    return new rds.DatabaseInstance(this, id, {
       engine: rds.DatabaseInstanceEngine.mysql({ version: rds.MysqlEngineVersion.VER_8_0_35 }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
       vpc,
@@ -139,6 +146,7 @@ export class VpcPeeringSimpleStack extends cdk.Stack {
       databaseName: 'MyDatabase',
       publiclyAccessible: false,
       deletionProtection: false,
+      credentials: rds.Credentials.fromSecret(dbCredentials),
     });
   }
 }
