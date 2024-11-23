@@ -21,12 +21,12 @@ export class VpcPeeringSimpleStack extends cdk.Stack {
       this.addVpcPeeringRoutes(subnet, vpc1.vpcCidrBlock, vpcPeering)
     });
 
-    const instanceSecurityGroup = this.createSecurityGroup('InstanceSG', vpc1, 'Allow SSH access', 22);
+    const instanceSecurityGroup = this.createEc2InstanceSecurityGroup('InstanceSG', vpc1, 'Allow SSH access', 22);
     const dbSecurityGroup = this.createDbSecurityGroup('DbSG', vpc2, instanceSecurityGroup);
 
     const databaseSubnetGroup = this.createRdsSubnetGroup('VPC2PrivateSubnetGroup', vpc2, vpc2IsolatedSubnets);
 
-    const databaseInstance = this.createRdsInstance('MySQLRDS', vpc2, dbSecurityGroup, databaseSubnetGroup);
+    this.createRdsInstance('MySQLRDS', vpc2, dbSecurityGroup, databaseSubnetGroup);
     this.createEc2Instance('EC2Instance', vpc1, publicSubnet, instanceSecurityGroup);
 
     new cdk.CfnOutput(this, 'Vpc1Id', { value: vpc1.vpcId });
@@ -87,7 +87,7 @@ export class VpcPeeringSimpleStack extends cdk.Stack {
     });
   }
 
-  private createSecurityGroup(id: string, vpc: ec2.Vpc, description: string, port: number): ec2.SecurityGroup {
+  private createEc2InstanceSecurityGroup(id: string, vpc: ec2.Vpc, description: string, port: number): ec2.SecurityGroup {
     const securityGroup = new ec2.SecurityGroup(this, id, {
       vpc,
       allowAllOutbound: true,
