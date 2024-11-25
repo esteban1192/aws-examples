@@ -2,33 +2,58 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
+// import { S3DestinationStack } from './s3-destination-bucket-stack';
 
+interface S3CrrSimpleStackProps extends cdk.StackProps {
+  destinationBucket: s3.Bucket
+}
 export class S3CrrSimpleStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: S3CrrSimpleStackProps) {
     super(scope, id, props);
 
-    // Destination Bucket
-    const destinationBucket = new s3.Bucket(this, 'DestinationBucket', {
-      versioned: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // For development; remove in production
-      autoDeleteObjects: true, // For development; remove in production
-      bucketName: `destination-bucket-${this.account}`
-    });
+    const destinationBucket = props.destinationBucket;
+    const sourceBucket = this.createSourceBucket();
+    const crrRole = this.createCrrRole(sourceBucket, destinationBucket);
 
-    // Source Bucket
-    const sourceBucket = new s3.Bucket(this, 'SourceBucket', {
+    this.setupBucketReplication(sourceBucket, destinationBucket, crrRole);
+  }
+
+  // private createDestinationBucket(): s3.Bucket {
+  //   // Create the destination bucket stack in sa-east-1 region
+  //   const destinationStack = new S3DestinationStack(this, 'S3DestinationStack', {
+  //     env: {
+  //       region: 'sa-east-1', // Set region for the destination stack
+  //     },
+  //   });
+  //   return destinationStack.destinationBucket;
+  // }
+
+  private createSourceBucket(): s3.Bucket {
+    return new s3.Bucket(this, 'SourceBucket', {
       versioned: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // For development; remove in production
       autoDeleteObjects: true, // For development; remove in production
       bucketName: `source-bucket-${this.account}`
     });
+  }
 
-    // Create the CRR IAM Role
+  private createCrrRole(sourceBucket: s3.Bucket, destinationBucket: s3.Bucket): iam.Role {
     const crrRole = new iam.Role(this, 'CRRRole', {
       assumedBy: new iam.ServicePrincipal('s3.amazonaws.com'),
+      roleName: 'S3CRRRole'
     });
 
     // Add permissions for replication
+    this.addReplicationPermissions(crrRole, sourceBucket, destinationBucket);
+
+    // Grant the role necessary access to the buckets
+    sourceBucket.grantRead(crrRole);
+    destinationBucket.grantWrite(crrRole);
+
+    return crrRole;
+  }
+
+  private addReplicationPermissions(crrRole: iam.Role, sourceBucket: s3.Bucket, destinationBucket: s3.Bucket): void {
     crrRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         's3:GetReplicationConfiguration',
@@ -36,6 +61,7 @@ export class S3CrrSimpleStack extends cdk.Stack {
       ],
       resources: [`${sourceBucket.bucketArn}`], // List and get replication config for source bucket
     }));
+
     crrRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         's3:GetObjectVersionForReplication',
@@ -44,6 +70,7 @@ export class S3CrrSimpleStack extends cdk.Stack {
       ],
       resources: [`${sourceBucket.bucketArn}/*`], // Get object version metadata for source bucket
     }));
+
     crrRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         's3:ReplicateObject',
@@ -52,12 +79,11 @@ export class S3CrrSimpleStack extends cdk.Stack {
       ],
       resources: [`${destinationBucket.bucketArn}/*`], // Allow replication to destination bucket
     }));
+  }
 
-    // Add permissions for the source bucket to use the replication role
-    sourceBucket.grantRead(crrRole);
-    destinationBucket.grantWrite(crrRole);
-
-    // Add Replication Configuration
+  private setupBucketReplication(sourceBucket: s3.Bucket, destinationBucket: s3.Bucket, crrRole: iam.Role): void {
+    // Using the CloudFormation (Cfn) resource to directly configure replication
+    // because the higher-level S3 construct does not expose the replication configuration directly.
     const sourceBucketCfn = sourceBucket.node.defaultChild as s3.CfnBucket;
     sourceBucketCfn.replicationConfiguration = {
       role: crrRole.roleArn,
@@ -69,14 +95,5 @@ export class S3CrrSimpleStack extends cdk.Stack {
         },
       }],
     };
-
-    // Outputs
-    new cdk.CfnOutput(this, 'SourceBucketName', {
-      value: sourceBucket.bucketName,
-    });
-
-    new cdk.CfnOutput(this, 'DestinationBucketName', {
-      value: destinationBucket.bucketName,
-    });
   }
 }
