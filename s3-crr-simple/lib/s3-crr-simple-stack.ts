@@ -2,7 +2,6 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
-// import { S3DestinationStack } from './s3-destination-bucket-stack';
 
 interface S3CrrSimpleStackProps extends cdk.StackProps {
   destinationBucket: s3.Bucket
@@ -17,16 +16,6 @@ export class S3CrrSimpleStack extends cdk.Stack {
 
     this.setupBucketReplication(sourceBucket, destinationBucket, crrRole);
   }
-
-  // private createDestinationBucket(): s3.Bucket {
-  //   // Create the destination bucket stack in sa-east-1 region
-  //   const destinationStack = new S3DestinationStack(this, 'S3DestinationStack', {
-  //     env: {
-  //       region: 'sa-east-1', // Set region for the destination stack
-  //     },
-  //   });
-  //   return destinationStack.destinationBucket;
-  // }
 
   private createSourceBucket(): s3.Bucket {
     return new s3.Bucket(this, 'SourceBucket', {

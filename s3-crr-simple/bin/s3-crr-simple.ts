@@ -5,7 +5,7 @@ import { S3CrrSimpleStack } from '../lib/s3-crr-simple-stack';
 import { S3DestinationBucketStack } from '../lib/s3-destination-bucket-stack';
 
 const app = new cdk.App();
-const accountId = '870727514155'
+const accountId = '000000000000' //set your own account id
 const s3DestinationStack = new S3DestinationBucketStack(app, 'S3DestinationStack', {
   env: {
     region: 'sa-east-1',
