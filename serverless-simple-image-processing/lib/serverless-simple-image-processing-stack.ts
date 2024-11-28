@@ -5,6 +5,7 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as s3_notifications from 'aws-cdk-lib/aws-s3-notifications'
 import * as path from 'path';
 
 export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
@@ -19,7 +20,13 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
     const uploadHandler = this.createUploadHandler(originalsBucket);
     this.setupApiGateway(uploadHandler);
 
+    const thumbnailsGeneratorHandler = this.createThumbnailsGeneratorHandler(thumbnailsBucket);
+    thumbnailsBucket.grantPut(thumbnailsGeneratorHandler);
+    originalsBucket.grantRead(thumbnailsGeneratorHandler);
+
     originalsBucket.grantPut(uploadHandler);
+
+    originalsBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3_notifications.LambdaDestination(thumbnailsGeneratorHandler));
   }
 
   private createBucket(id: string, bucketName: string): s3.Bucket {
@@ -44,14 +51,24 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
   }
 
   private createUploadHandler(bucket: s3.Bucket): lambda.Function {
-    const layerVersion = new lambda.LayerVersion(this, 'UploadHandlerLayerVersion', {
-      code: lambda.Code.fromAsset(path.join(__dirname, 'image-uploader', 'layer-version')),
-    });
-
     return new lambda.Function(this, 'UploadHandler', {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, 'image-uploader')),
+      environment: {
+        BUCKET_NAME: bucket.bucketName,
+      },
+    });
+  }
+
+  private createThumbnailsGeneratorHandler(bucket: s3.Bucket): lambda.Function {
+    const layerVersion = new lambda.LayerVersion(this, 'UploadHandlerLayerVersion', {
+      code: lambda.Code.fromAsset(path.join(__dirname, 'thumbnails-generator', 'layer-version')),
+    });
+    return new lambda.Function(this, 'ThumbnailsGeneratorHandler', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, 'thumbnails-generator')),
       environment: {
         BUCKET_NAME: bucket.bucketName,
       },
