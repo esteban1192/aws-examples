@@ -8,32 +8,23 @@ export class TransitGatewaySimpleVpcConnectionsStack extends cdk.Stack {
 
     const transitGateway = this.createTransitGateway();
 
-    const vpc0 = this.createVpc('VPC0', '10.0.0.0/16');
-    const vpc1 = this.createVpc('VPC1', '10.1.0.0/16');
-    const vpc2 = this.createVpc('VPC2', '10.2.0.0/16');
+    const vpcs = [
+      { id: 'VPC0', cidrBlock: '10.0.0.0/16' },
+      { id: 'VPC1', cidrBlock: '10.1.0.0/16' },
+      { id: 'VPC2', cidrBlock: '10.2.0.0/16' },
+    ];
 
-    const attachment0 = this.createTransitGatewayAttachment(transitGateway, vpc0, 'Attachment-VPC0');
-    attachment0.addDependency(transitGateway)
-    const attachment1 = this.createTransitGatewayAttachment(transitGateway, vpc1, 'Attachment-VPC1');
-    attachment1.addDependency(transitGateway);
-    const attachment2 = this.createTransitGatewayAttachment(transitGateway, vpc2, 'Attachment-VPC2');
-    attachment2.addDependency(transitGateway);
+    const attachments = vpcs.map(({ id, cidrBlock }) => {
+      const vpc = this.createVpc(id, cidrBlock);
+      const attachment = this.createTransitGatewayAttachment(transitGateway, vpc, `Attachment-${id}`);
+      this.addRouteToTransitGateway(vpc, transitGateway).forEach(route => route.addDependency(attachment));
+      return { vpc, attachment };
+    });
 
-    this.addRouteToTransitGateway(vpc0, transitGateway).map((route) => route.addDependency(attachment0))
-    this.addRouteToTransitGateway(vpc1, transitGateway).map((route) => route.addDependency(attachment1))
-    this.addRouteToTransitGateway(vpc2, transitGateway).map((route) => route.addDependency(attachment2))
-
-    const instance0 = this.addEc2InstanceToIsolatedSubnet(vpc0);
-    const instance1 = this.addEc2InstanceToIsolatedSubnet(vpc1);
-    const instance2 = this.addEc2InstanceToIsolatedSubnet(vpc2);
-
-    [
-      { instance: instance0, vpc: vpc0 }, 
-      { instance: instance1, vpc: vpc1 },
-      { instance: instance2, vpc: vpc2 }
-    ].map(({instance, vpc}) => {
-      this.createInstanceConnectEndpoint(instance, vpc)
-    })
+    attachments.forEach(({ vpc }) => {
+      const instance = this.addEc2InstanceToIsolatedSubnet(vpc);
+      this.createInstanceConnectEndpoint(instance, vpc);
+    });
   }
 
   private createTransitGateway(): ec2.CfnTransitGateway {
@@ -58,6 +49,7 @@ export class TransitGatewaySimpleVpcConnectionsStack extends cdk.Stack {
           cidrMask: 24,
         },
       ],
+      vpcName: id
     });
   }
 
@@ -73,31 +65,28 @@ export class TransitGatewaySimpleVpcConnectionsStack extends cdk.Stack {
     });
   }
 
-  // Add route to transit gateway in each isolated subnet's route table
   private addRouteToTransitGateway(vpc: ec2.Vpc, transitGateway: ec2.CfnTransitGateway): ec2.CfnRoute[] {
-    return vpc.isolatedSubnets.map(subnet => {
-      return new ec2.CfnRoute(this, `Route-${vpc.node.id}-${subnet.node.id}`, {
-        routeTableId: subnet.routeTable.routeTableId,
-        destinationCidrBlock: '0.0.0.0/0', // You can adjust the CIDR block as needed
-        transitGatewayId: transitGateway.attrId,
-      });
-    });
+    return vpc.isolatedSubnets.map(subnet => new ec2.CfnRoute(this, `Route-${vpc.node.id}-${subnet.node.id}`, {
+      routeTableId: subnet.routeTable.routeTableId,
+      destinationCidrBlock: '0.0.0.0/0',
+      transitGatewayId: transitGateway.attrId,
+    }));
   }
 
   private createInstanceConnectEndpoint(instance: ec2.Instance, vpc: ec2.Vpc) {
     const instanceConnectEndpointSg = new ec2.SecurityGroup(this, `InstanceConnectSG-${vpc.node.id}`, {
       vpc,
       description: 'Security group for Instance Connect Endpoint',
-    })
+    });
 
-    const instanceConnectEndpoint = new ec2.CfnInstanceConnectEndpoint(this, `InstanceConnectEndpoint${vpc.node.id}`, {
+    const instanceConnectEndpoint = new ec2.CfnInstanceConnectEndpoint(this, `InstanceConnectEndpoint-${vpc.node.id}`, {
       subnetId: vpc.isolatedSubnets[0].subnetId,
-      securityGroupIds: [instanceConnectEndpointSg.securityGroupId]
+      securityGroupIds: [instanceConnectEndpointSg.securityGroupId],
     });
     instanceConnectEndpoint.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
 
-    instance.connections.securityGroups.map((ec2InstanceSecurityGroup: ec2.ISecurityGroup) => {
-      ec2InstanceSecurityGroup.addIngressRule(instanceConnectEndpointSg, ec2.Port.tcp(22))
+    instance.connections.securityGroups.forEach((ec2InstanceSecurityGroup: ec2.ISecurityGroup) => {
+      ec2InstanceSecurityGroup.addIngressRule(instanceConnectEndpointSg, ec2.Port.tcp(22));
     });
   }
 
@@ -108,9 +97,11 @@ export class TransitGatewaySimpleVpcConnectionsStack extends cdk.Stack {
       vpc,
       vpcSubnets: { subnets: vpc.isolatedSubnets },
     });
-    ec2Instance.connections.securityGroups.map(ec2InstanceSecurityGroup => {
-      ec2InstanceSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.icmpPing()) // Allow ping from anywhere
-    })
+
+    ec2Instance.connections.securityGroups.forEach(ec2InstanceSecurityGroup => {
+      ec2InstanceSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.icmpPing()); // Allow ping from anywhere
+    });
+
     return ec2Instance;
   }
 }
