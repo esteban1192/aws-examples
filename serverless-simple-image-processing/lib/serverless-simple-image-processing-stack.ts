@@ -11,21 +11,29 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const originalsBucket = new s3.Bucket(this, 'OriginalsBucket', {
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev environments
-      bucketName: `originals-bucket-${this.account}`,
-    });
+    const originalsBucket = this.createBucket('OriginalsBucket', `originals-bucket-${this.account}`);
+    const thumbnailsBucket = this.createBucket('ThumbnailsBucket', `thumbnails-bucket-${this.account}`);
 
-    const thumbnailsBucket = new s3.Bucket(this, 'ThumbnailsBucket', {
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev environments
-      bucketName: `thumbnails-bucket-${this.account}`,
-    });
+    this.setupCloudFront(thumbnailsBucket);
 
-    // CloudFront setup
+    const uploadHandler = this.createUploadHandler(originalsBucket);
+    this.setupApiGateway(uploadHandler);
+
+    originalsBucket.grantPut(uploadHandler);
+  }
+
+  private createBucket(id: string, bucketName: string): s3.Bucket {
+    return new s3.Bucket(this, id, {
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev environments
+      bucketName,
+    });
+  }
+
+  private setupCloudFront(bucket: s3.Bucket): void {
     const oac = new cloudfront.S3OriginAccessControl(this, 'S3OriginAccessControl', {
       originAccessControlName: 'S3OriginAccessControl',
     });
-    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(thumbnailsBucket, {
+    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(bucket, {
       originAccessControl: oac,
     });
     new cloudfront.Distribution(this, 'CloudfrontDistribution', {
@@ -33,22 +41,25 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
         origin: s3Origin,
       },
     });
+  }
 
-    // Lambda Function to handle image upload
+  private createUploadHandler(bucket: s3.Bucket): lambda.Function {
     const layerVersion = new lambda.LayerVersion(this, 'UploadHandlerLayerVersion', {
       code: lambda.Code.fromAsset(path.join(__dirname, 'image-uploader', 'layer-version')),
-    })
-    const uploadHandler = new lambda.Function(this, 'UploadHandler', {
+    });
+
+    return new lambda.Function(this, 'UploadHandler', {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, 'image-uploader')),
       environment: {
-        BUCKET_NAME: originalsBucket.bucketName,
+        BUCKET_NAME: bucket.bucketName,
       },
-      layers: [layerVersion]
+      layers: [layerVersion],
     });
-    originalsBucket.grantPut(uploadHandler);
+  }
 
+  private setupApiGateway(uploadHandler: lambda.Function): void {
     const api = new apigateway.RestApi(this, 'ImageUploadApi', {
       restApiName: 'Image Upload API',
     });
