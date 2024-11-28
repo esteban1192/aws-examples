@@ -1,0 +1,88 @@
+<mxfile host="localhost" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" version="24.7.5">
+  <diagram id="GyuAC4f0XKoQMXSpdfnd" name="Page-1">
+    <mxGraphModel dx="831" dy="471" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-1" value="User" style="outlineConnect=0;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;shape=mxgraph.aws3.user;fillColor=#D2D3D3;gradientColor=none;" vertex="1" parent="1">
+          <mxGeometry x="11" y="240" width="45" height="63" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-2" value="API Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="1">
+          <mxGeometry x="181" y="100" width="78" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-3" value="Upload Image Request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="sEzZNfK2-qaoIdYBrFgM-1" target="sEzZNfK2-qaoIdYBrFgM-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="101" y="272" />
+              <mxPoint x="101" y="139" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-4" value="Image" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="111" y="70" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-5" value="Cloudfront Distribution&lt;br&gt;(To serve thumbnails)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;" vertex="1" parent="1">
+          <mxGeometry x="181" y="340" width="78" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-6" value="Get Thumbnails Request" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="sEzZNfK2-qaoIdYBrFgM-1" target="sEzZNfK2-qaoIdYBrFgM-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="101" y="272" />
+              <mxPoint x="101" y="379" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" target="sEzZNfK2-qaoIdYBrFgM-10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="429.9999999999998" y="138.9999999999999" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="sEzZNfK2-qaoIdYBrFgM-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="361" y="138.9999999999999" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-9" value="Image" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="281" y="70" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-10" value="S3 Bucket (Originals)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.bucket_with_objects;" vertex="1" parent="1">
+          <mxGeometry x="511" y="100" width="75" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-12" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="791" y="255" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-13" value="&lt;span style=&quot;color: rgb(35, 47, 62); font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; display: inline !important; float: none;&quot;&gt;&lt;br&gt;Thumbnails&lt;/span&gt;" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="761" y="240" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-14" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="731" y="225" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-16" value="Image" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.container_registry_image;" vertex="1" parent="1">
+          <mxGeometry x="441" y="70" width="48" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" target="sEzZNfK2-qaoIdYBrFgM-19">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="725.4999999999998" y="174.9999999999999" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-18" value="Event&lt;br&gt;Notification" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="sEzZNfK2-qaoIdYBrFgM-10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="691" y="138.9999999999999" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-19" value="S3 Bucket (Thumbnails)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#7AA116;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.bucket_with_objects;" vertex="1" parent="1">
+          <mxGeometry x="688" y="340" width="75" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-21" value="Origin Access Identity Auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sEzZNfK2-qaoIdYBrFgM-5" target="sEzZNfK2-qaoIdYBrFgM-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-22" value="Image Uploader" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.lambda_function;" vertex="1" parent="1">
+          <mxGeometry x="360" y="104.5" width="69" height="69" as="geometry" />
+        </mxCell>
+        <mxCell id="sEzZNfK2-qaoIdYBrFgM-23" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Thumbnails Generator&lt;/span&gt;" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.lambda_function;" vertex="1" parent="1">
+          <mxGeometry x="691" y="104.5" width="69" height="69" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
