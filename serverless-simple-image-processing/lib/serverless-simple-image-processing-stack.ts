@@ -8,9 +8,9 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const bucket = new s3.Bucket(this, 'OriginalsBucket', {
+    const bucket = new s3.Bucket(this, 'ThumbnailsBucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev environments
-      bucketName: `originals-bucket-${this.account}`
+      bucketName: `thumbnails-bucket-${this.account}`
     });
     const oac = new cloudfront.S3OriginAccessControl(this, 'S3OriginAccessControl', {
       originAccessControlName: 'S3OriginAccessControl',
