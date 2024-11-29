@@ -15,22 +15,25 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
     const originalsBucket = this.createBucket('OriginalsBucket', `originals-bucket-${this.account}`);
     const thumbnailsBucket = this.createBucket('ThumbnailsBucket', `thumbnails-bucket-${this.account}`);
 
-    this.setupCloudFront(thumbnailsBucket);
-
     const uploadHandler = this.createUploadHandler(originalsBucket);
-    this.setupApiGateway(uploadHandler);
-
     const thumbnailsGeneratorHandler = this.createThumbnailsGeneratorHandler(thumbnailsBucket);
+
+    originalsBucket.grantPut(uploadHandler);
     thumbnailsBucket.grantPut(thumbnailsGeneratorHandler);
     originalsBucket.grantRead(thumbnailsGeneratorHandler);
 
-    originalsBucket.grantPut(uploadHandler);
+    originalsBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3_notifications.LambdaDestination(thumbnailsGeneratorHandler)
+    );
 
-    originalsBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3_notifications.LambdaDestination(thumbnailsGeneratorHandler));
+    this.setupCloudFront(thumbnailsBucket);
+    this.setupApiGateway(uploadHandler);
   }
 
   private createBucket(id: string, bucketName: string): s3.Bucket {
     return new s3.Bucket(this, id, {
+      autoDeleteObjects: true, // Remove objects when the stack is destroyed
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Only for dev environments
       bucketName,
     });
@@ -58,11 +61,12 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
       environment: {
         BUCKET_NAME: bucket.bucketName,
       },
+      functionName: 'OriginalsUploader'
     });
   }
 
   private createThumbnailsGeneratorHandler(bucket: s3.Bucket): lambda.Function {
-    const layerVersion = new lambda.LayerVersion(this, 'UploadHandlerLayerVersion', {
+    const layerVersion = new lambda.LayerVersion(this, 'ThumbnailsGeneratorHandlerLayerVersion', {
       code: lambda.Code.fromAsset(path.join(__dirname, 'thumbnails-generator', 'layer-version')),
     });
     return new lambda.Function(this, 'ThumbnailsGeneratorHandler', {
@@ -72,7 +76,9 @@ export class ServerlessSimpleImageProcessingStack extends cdk.Stack {
       environment: {
         BUCKET_NAME: bucket.bucketName,
       },
+      functionName: 'ThumbnailsGenerator',
       layers: [layerVersion],
+      timeout: cdk.Duration.seconds(10)
     });
   }
 
