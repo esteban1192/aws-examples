@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3Notifications from 'aws-cdk-lib/aws-s3-notifications';
 import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import * as stepfunctionsTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
@@ -27,7 +29,7 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
     const fileTypeDetectorTask = new stepfunctionsTasks.LambdaInvoke(this, 'FileTypeDetectorTask', {
       lambdaFunction: fileTypeDetectorFunction,
       inputPath: '$.objectInfo',
-      outputPath: '$.bucketName',
+      resultPath: '$.contentType',
     });
 
     const createProcessingTask = (id: string, lambdaFunction: lambda.Function, successId: string) => {
@@ -52,8 +54,31 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
         .otherwise(new stepfunctions.Fail(this, 'UnsupportedContentType'))
     );
 
-    new stepfunctions.StateMachine(this, 'StateMachine', {
+    const stateMachine = new stepfunctions.StateMachine(this, 'StateMachine', {
       definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
     });
+
+    const s3NotificationHandler = new lambda.Function(this, 'S3NotificationHandler', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, 's3-notification-handler')),
+      environment: {
+        STATE_MACHINE_ARN: stateMachine.stateMachineArn,
+      },
+      functionName: 'S3NotificationHandler',
+    });
+
+    const bucket = new s3.Bucket(this, 'S3Bucket', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3Notifications.LambdaDestination(s3NotificationHandler)
+    );
+
+    stateMachine.grantStartExecution(s3NotificationHandler);
+    bucket.grantRead(s3NotificationHandler);
   }
 }
