@@ -11,46 +11,58 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const createLambdaFunction = (id: string, functionName: string) => {
+    const createLambdaFunction = (id: string, functionName: string, dirname: string, environment?: {[key: string]: string}) => {
       return new lambda.Function(this, id, {
         runtime: lambda.Runtime.NODEJS_22_X,
         handler: 'index.handler',
-        code: lambda.Code.fromAsset(path.join(__dirname, 'file-type-detector')),
+        code: lambda.Code.fromAsset(path.join(__dirname, dirname)),
         functionName,
+        environment
       });
     };
 
-    const fileTypeDetectorFunction = createLambdaFunction('FileTypeDetectorFunction', 'FileTypeDetector');
-    const xmlProcessorFunction = createLambdaFunction('XMLProcessorFunction', 'XMLProcessor');
-    const csvProcessorFunction = createLambdaFunction('CSVProcessorFunction', 'CSVProcessor');
-    const jsonProcessorFunction = createLambdaFunction('JSONProcessorFunction', 'JSONProcessor');
-    const yamlProcessorFunction = createLambdaFunction('YAMLProcessorFunction', 'YAMLProcessor');
+    const fileTypeDetectorFunction = createLambdaFunction('FileTypeDetectorFunction', 'FileTypeDetector', 'file-type-detector');
+    const xmlProcessorFunction = createLambdaFunction('XMLProcessorFunction', 'XMLProcessor', 'xml-processor');
+    const csvProcessorFunction = createLambdaFunction('CSVProcessorFunction', 'CSVProcessor', 'csv-processor');
+    const jsonProcessorFunction = createLambdaFunction('JSONProcessorFunction', 'JSONProcessor', 'json-processor');
+    const yamlProcessorFunction = createLambdaFunction('YAMLProcessorFunction', 'YAMLProcessor', 'yaml-processor');
 
     const fileTypeDetectorTask = new stepfunctionsTasks.LambdaInvoke(this, 'FileTypeDetectorTask', {
       lambdaFunction: fileTypeDetectorFunction,
       inputPath: '$.objectInfo',
-      resultPath: '$.contentType',
     });
 
-    const createProcessingTask = (id: string, lambdaFunction: lambda.Function, successId: string) => {
-      return new stepfunctionsTasks.LambdaInvoke(this, id, {
+    const createProcessingTask = (id: string, lambdaFunction: lambda.Function, successId: string, failureId: string) => {
+      const lambdaInvoke = new stepfunctionsTasks.LambdaInvoke(this, id, {
         lambdaFunction,
-        inputPath: '$.objectContent',
-        outputPath: '$.result',
-      }).next(new stepfunctions.Succeed(this, successId));
+        inputPath: '$.Payload',
+      })
+      const choiceState = new stepfunctions.Choice(this, `${id}-Choice`)
+        .when(
+          stepfunctions.Condition.booleanEquals('$.Payload.success', true),
+          new stepfunctions.Succeed(this, successId)
+        )
+        .otherwise(
+          new stepfunctions.Fail(this, failureId, {
+            error: 'Some error occurred while processing the file content',
+            cause: 'The Lambda function did not return true.',
+          })
+        );
+      lambdaInvoke.next(choiceState);
+      return lambdaInvoke;
     };
 
-    const xmlProcessorTask = createProcessingTask('XMLProcessorTask', xmlProcessorFunction, 'XMLProcessingDone');
-    const csvProcessorTask = createProcessingTask('CSVProcessorTask', csvProcessorFunction, 'CSVProcessingDone');
-    const jsonProcessorTask = createProcessingTask('JSONProcessorTask', jsonProcessorFunction, 'JSONProcessingDone');
-    const yamlProcessorTask = createProcessingTask('YAMLProcessorTask', yamlProcessorFunction, 'YAMLProcessingDone');
+    const xmlProcessorTask = createProcessingTask('XMLProcessorTask', xmlProcessorFunction, 'XMLProcessingSuccess', 'XMLProcessingFailure');
+    const csvProcessorTask = createProcessingTask('CSVProcessorTask', csvProcessorFunction, 'CSVProcessingSuccess', 'CSVProcessingFailure');
+    const jsonProcessorTask = createProcessingTask('JSONProcessorTask', jsonProcessorFunction, 'JSONProcessingSuccess', 'JSONProcessingFailure');
+    const yamlProcessorTask = createProcessingTask('YAMLProcessorTask', yamlProcessorFunction, 'YAMLProcessingSuccess', 'YAMLProcessingFailure');
 
     const definition = fileTypeDetectorTask.next(
       new stepfunctions.Choice(this, 'FileTypeChoice')
-        .when(stepfunctions.Condition.stringMatches('$.contentType', 'xml'), xmlProcessorTask)
-        .when(stepfunctions.Condition.stringMatches('$.contentType', 'csv'), csvProcessorTask)
-        .when(stepfunctions.Condition.stringMatches('$.contentType', 'json'), jsonProcessorTask)
-        .when(stepfunctions.Condition.stringMatches('$.contentType', 'yaml'), yamlProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'xml'), xmlProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'csv'), csvProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'json'), jsonProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'yaml'), yamlProcessorTask)
         .otherwise(new stepfunctions.Fail(this, 'UnsupportedContentType'))
     );
 
@@ -58,15 +70,9 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
       definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
     });
 
-    const s3NotificationHandler = new lambda.Function(this, 'S3NotificationHandler', {
-      runtime: lambda.Runtime.NODEJS_22_X,
-      handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, 's3-notification-handler')),
-      environment: {
-        STATE_MACHINE_ARN: stateMachine.stateMachineArn,
-      },
-      functionName: 'S3NotificationHandler',
-    });
+    const s3NotificationHandler = createLambdaFunction('S3NotificationHandler', 'S3NotificationHandler', 's3-notification-handler', {
+      STATE_MACHINE_ARN: stateMachine.stateMachineArn,
+    })
 
     const bucket = new s3.Bucket(this, 'S3Bucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
