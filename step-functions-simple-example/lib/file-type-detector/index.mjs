@@ -19,7 +19,8 @@ export const handler = async (event) => {
 
     return {
       contentType,
-      message: contentType !== "unknown" ? "MIME type detected" : "Unable to determine MIME type",
+      bucket,
+      objectKey,
     };
   } catch (error) {
     console.error("Error detecting content type:", error);
