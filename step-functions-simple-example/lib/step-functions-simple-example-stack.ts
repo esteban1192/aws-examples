@@ -6,17 +6,30 @@ import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import * as stepfunctionsTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export class StepFunctionsSimpleExampleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const fileTypeDetectorFunction = this.createLambdaFunction('FileTypeDetectorFunction', 'FileTypeDetector', 'file-type-detector');
+    const dynamoTable = new dynamodb.Table(this, 'DynamoTable', {
+      partitionKey: { name: 'objectKey', type: dynamodb.AttributeType.STRING },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const fileTypeDetectorLayer = this.createLayerVersion('FileTypeDetectorLayer', 'file-type-detector/layer-version', 'FileTypeDetector');
+
+    const fileTypeDetectorFunction = this.createLambdaFunction('FileTypeDetectorFunction', 'FileTypeDetector', 'file-type-detector', undefined, fileTypeDetectorLayer);
     const xmlProcessorFunction = this.createLambdaFunction('XMLProcessorFunction', 'XMLProcessor', 'xml-processor');
     const csvProcessorFunction = this.createLambdaFunction('CSVProcessorFunction', 'CSVProcessor', 'csv-processor');
     const jsonProcessorFunction = this.createLambdaFunction('JSONProcessorFunction', 'JSONProcessor', 'json-processor');
     const yamlProcessorFunction = this.createLambdaFunction('YAMLProcessorFunction', 'YAMLProcessor', 'yaml-processor');
     
+    dynamoTable.grantWriteData(xmlProcessorFunction);
+    dynamoTable.grantWriteData(csvProcessorFunction);
+    dynamoTable.grantWriteData(jsonProcessorFunction);
+    dynamoTable.grantWriteData(yamlProcessorFunction);
+
     const fileTypeDetectorTask = this.createFileTypeDetectorTask(fileTypeDetectorFunction);
     const xmlProcessorTask = this.createProcessingTask('XMLProcessorTask', xmlProcessorFunction, 'XMLProcessingSuccess', 'XMLProcessingFailure');
     const csvProcessorTask = this.createProcessingTask('CSVProcessorTask', csvProcessorFunction, 'CSVProcessingSuccess', 'CSVProcessingFailure');
@@ -30,19 +43,34 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
     });
 
     const bucket = this.createS3Bucket(s3NotificationHandler);
+    bucket.grantRead(fileTypeDetectorFunction)
 
     stateMachine.grantStartExecution(s3NotificationHandler);
     bucket.grantRead(s3NotificationHandler);
   }
 
-  private createLambdaFunction(id: string, functionName: string, dirname: string, environment?: {[key: string]: string}) {
-    return new lambda.Function(this, id, {
+  private createLayerVersion(id: string, dirname: string, layerName: string) {
+    return new lambda.LayerVersion(this, id, {
+      code: lambda.Code.fromAsset(path.join(__dirname, dirname)),
+      layerVersionName: layerName
+    });
+  }  
+
+  private createLambdaFunction(id: string, functionName: string, dirname: string, environment?: { [key: string]: string }, layerVersion?: lambda.ILayerVersion): lambda.Function {
+    const lambdaFunction = new lambda.Function(this, id, {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, dirname)),
       functionName,
-      environment
+      environment,
+      timeout: cdk.Duration.seconds(10)
     });
+
+    if (layerVersion) {
+      lambdaFunction.addLayers(layerVersion);
+    }
+
+    return lambdaFunction;
   }
 
   private createFileTypeDetectorTask(fileTypeDetectorFunction: lambda.Function) {
@@ -75,10 +103,10 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
   private createStateMachine(fileTypeDetectorTask: stepfunctionsTasks.LambdaInvoke, xmlProcessorTask: stepfunctionsTasks.LambdaInvoke, csvProcessorTask: stepfunctionsTasks.LambdaInvoke, jsonProcessorTask: stepfunctionsTasks.LambdaInvoke, yamlProcessorTask: stepfunctionsTasks.LambdaInvoke) {
     const definition = fileTypeDetectorTask.next(
       new stepfunctions.Choice(this, 'FileTypeChoice')
-        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'xml'), xmlProcessorTask)
-        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'csv'), csvProcessorTask)
-        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'json'), jsonProcessorTask)
-        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'yaml'), yamlProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'application/xml'), xmlProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'text/csv'), csvProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'application/json'), jsonProcessorTask)
+        .when(stepfunctions.Condition.stringMatches('$.Payload.contentType', 'text/yaml'), yamlProcessorTask)
         .otherwise(new stepfunctions.Fail(this, 'UnsupportedContentType'))
     );
 
