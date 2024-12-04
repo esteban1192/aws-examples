@@ -29,8 +29,6 @@ export const handler = async (event) => {
 
     console.log("Parsed JSON Data:", jsonData);
 
-    const id = jsonData.id || `id-${Date.now()}`;
-
     const params = {
       TableName: process.env.TABLE_NAME,
       Item: {

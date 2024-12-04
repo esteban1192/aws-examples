@@ -15,12 +15,15 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
     const dynamoTable = this.createDynamoTable();
 
     const fileTypeDetectorLayer = this.createLayerVersion('FileTypeDetectorLayer', 'file-type-detector/layer-version', 'FileTypeDetector');
+    const csvProcessorFunctionLayer = this.createLayerVersion('CSVProcessorLayer', 'csv-processor/layer-version', 'CSVProcessor');
+    const xmlProcessorFunctionLayer = this.createLayerVersion('XMLProcessorLayer', 'xml-processor/layer-version', 'XMLProcessor');
 
+    const commonEnvVars = { TABLE_NAME: dynamoTable.tableName };
     const fileTypeDetectorFunction = this.createLambdaFunction('FileTypeDetectorFunction', 'FileTypeDetector', 'file-type-detector', undefined, fileTypeDetectorLayer);
-    const xmlProcessorFunction = this.createLambdaFunction('XMLProcessorFunction', 'XMLProcessor', 'xml-processor');
-    const csvProcessorFunction = this.createLambdaFunction('CSVProcessorFunction', 'CSVProcessor', 'csv-processor');
-    const jsonProcessorFunction = this.createLambdaFunction('JSONProcessorFunction', 'JSONProcessor', 'json-processor', { TABLE_NAME: dynamoTable.tableName });
-    const yamlProcessorFunction = this.createLambdaFunction('YAMLProcessorFunction', 'YAMLProcessor', 'yaml-processor');
+    const xmlProcessorFunction = this.createLambdaFunction('XMLProcessorFunction', 'XMLProcessor', 'xml-processor', commonEnvVars, xmlProcessorFunctionLayer);
+    const csvProcessorFunction = this.createLambdaFunction('CSVProcessorFunction', 'CSVProcessor', 'csv-processor', commonEnvVars, csvProcessorFunctionLayer);
+    const jsonProcessorFunction = this.createLambdaFunction('JSONProcessorFunction', 'JSONProcessor', 'json-processor', commonEnvVars);
+    const yamlProcessorFunction = this.createLambdaFunction('YAMLProcessorFunction', 'YAMLProcessor', 'yaml-processor', commonEnvVars);
 
     dynamoTable.grantWriteData(xmlProcessorFunction);
     dynamoTable.grantWriteData(csvProcessorFunction);
@@ -42,6 +45,9 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
     const bucket = this.createS3Bucket(s3NotificationHandler);
     bucket.grantRead(fileTypeDetectorFunction);
     bucket.grantRead(jsonProcessorFunction);
+    bucket.grantRead(csvProcessorFunction);
+    bucket.grantRead(xmlProcessorFunction);
+    bucket.grantRead(yamlProcessorFunction);
 
     stateMachine.grantStartExecution(s3NotificationHandler);
     bucket.grantRead(s3NotificationHandler);
