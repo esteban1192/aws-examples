@@ -12,19 +12,16 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const dynamoTable = new dynamodb.Table(this, 'DynamoTable', {
-      partitionKey: { name: 'objectKey', type: dynamodb.AttributeType.STRING },
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+    const dynamoTable = this.createDynamoTable();
 
     const fileTypeDetectorLayer = this.createLayerVersion('FileTypeDetectorLayer', 'file-type-detector/layer-version', 'FileTypeDetector');
 
     const fileTypeDetectorFunction = this.createLambdaFunction('FileTypeDetectorFunction', 'FileTypeDetector', 'file-type-detector', undefined, fileTypeDetectorLayer);
     const xmlProcessorFunction = this.createLambdaFunction('XMLProcessorFunction', 'XMLProcessor', 'xml-processor');
     const csvProcessorFunction = this.createLambdaFunction('CSVProcessorFunction', 'CSVProcessor', 'csv-processor');
-    const jsonProcessorFunction = this.createLambdaFunction('JSONProcessorFunction', 'JSONProcessor', 'json-processor');
+    const jsonProcessorFunction = this.createLambdaFunction('JSONProcessorFunction', 'JSONProcessor', 'json-processor', { TABLE_NAME: dynamoTable.tableName });
     const yamlProcessorFunction = this.createLambdaFunction('YAMLProcessorFunction', 'YAMLProcessor', 'yaml-processor');
-    
+
     dynamoTable.grantWriteData(xmlProcessorFunction);
     dynamoTable.grantWriteData(csvProcessorFunction);
     dynamoTable.grantWriteData(jsonProcessorFunction);
@@ -35,7 +32,7 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
     const csvProcessorTask = this.createProcessingTask('CSVProcessorTask', csvProcessorFunction, 'CSVProcessingSuccess', 'CSVProcessingFailure');
     const jsonProcessorTask = this.createProcessingTask('JSONProcessorTask', jsonProcessorFunction, 'JSONProcessingSuccess', 'JSONProcessingFailure');
     const yamlProcessorTask = this.createProcessingTask('YAMLProcessorTask', yamlProcessorFunction, 'YAMLProcessingSuccess', 'YAMLProcessingFailure');
-    
+
     const stateMachine = this.createStateMachine(fileTypeDetectorTask, xmlProcessorTask, csvProcessorTask, jsonProcessorTask, yamlProcessorTask);
 
     const s3NotificationHandler = this.createLambdaFunction('S3NotificationHandler', 'S3NotificationHandler', 's3-notification-handler', {
@@ -43,10 +40,18 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
     });
 
     const bucket = this.createS3Bucket(s3NotificationHandler);
-    bucket.grantRead(fileTypeDetectorFunction)
+    bucket.grantRead(fileTypeDetectorFunction);
+    bucket.grantRead(jsonProcessorFunction);
 
     stateMachine.grantStartExecution(s3NotificationHandler);
     bucket.grantRead(s3NotificationHandler);
+  }
+
+  private createDynamoTable(): dynamodb.Table {
+    return new dynamodb.Table(this, 'DynamoTable', {
+      partitionKey: { name: 'objectKey', type: dynamodb.AttributeType.STRING },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
   }
 
   private createLayerVersion(id: string, dirname: string, layerName: string) {
@@ -54,7 +59,7 @@ export class StepFunctionsSimpleExampleStack extends cdk.Stack {
       code: lambda.Code.fromAsset(path.join(__dirname, dirname)),
       layerVersionName: layerName
     });
-  }  
+  }
 
   private createLambdaFunction(id: string, functionName: string, dirname: string, environment?: { [key: string]: string }, layerVersion?: lambda.ILayerVersion): lambda.Function {
     const lambdaFunction = new lambda.Function(this, id, {
