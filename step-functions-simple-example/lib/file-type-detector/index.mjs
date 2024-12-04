@@ -4,8 +4,6 @@ import mime from "mime";
 const s3Client = new S3Client();
 
 export const handler = async (event) => {
-  console.log("Received event:", event);
-
   const { bucketName: bucket, objectKey } = event;
   const key = decodeURIComponent(objectKey.replace(/\+/g, " "));
 
