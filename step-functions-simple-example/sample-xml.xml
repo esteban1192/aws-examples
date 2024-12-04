@@ -1,4 +1,41 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<name>John Doe</name>
-<age>30</age>
-<city>New York</city>
+<note>
+    <metadata>
+        <id>12345</id>
+        <timestamp>2024-12-04T10:15:30Z</timestamp>
+        <priority>High</priority>
+    </metadata>
+    <recipient>
+        <to>Tove</to>
+        <contact>
+            <email>tove@example.com</email>
+            <phone>+123456789</phone>
+        </contact>
+    </recipient>
+    <sender>
+        <from>Jani</from>
+        <contact>
+            <email>jani@example.com</email>
+            <phone>+987654321</phone>
+        </contact>
+    </sender>
+    <message>
+        <heading>Reminder</heading>
+        <body>Don't forget me this weekend!</body>
+        <attachments>
+            <attachment>
+                <type>image</type>
+                <url>https://example.com/image.jpg</url>
+                <description>Weekend itinerary</description>
+            </attachment>
+            <attachment>
+                <type>document</type>
+                <url>https://example.com/doc.pdf</url>
+                <description>Checklist</description>
+            </attachment>
+        </attachments>
+    </message>
+    <status>
+        <sent>true</sent>
+        <read>false</read>
+    </status>
+</note>
