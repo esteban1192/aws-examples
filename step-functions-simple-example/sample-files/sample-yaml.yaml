@@ -1,0 +1,19 @@
+name: John Doe
+age: 30
+email: john.doe@example.com
+address:
+  street: 123 Elm Street
+  city: Springfield
+  state: IL
+  zip: 62704
+preferences:
+  notifications: true
+  newsletter: false
+skills:
+  - JavaScript
+  - TypeScript
+  - AWS
+  - Docker
+metadata:
+  createdAt: 2024-12-04T10:00:00Z
+  updatedAt: 2024-12-04T12:00:00Z
