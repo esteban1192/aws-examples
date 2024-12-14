@@ -48,12 +48,12 @@ function generateNonSensitivePdf(outputDir, fileName) {
     doc.end();
 }
 
-function generateFakeFiles(numSensitiveFiles = 5, numNonsensitiveFiles = 5, outputDir='test-data') {
+function generateFakeFiles(numOfFilesOfEach = 5, outputDir='test-data') {
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    for (let i = 0; i < numSensitiveFiles; i++) {
+    for (let i = 0; i < numOfFilesOfEach; i++) {
         generateSensitiveTxt(outputDir, `sensitive-${i+1}.txt`);
         generateNonSensitiveTxt(outputDir, `nonsensitive-${i+1}.txt`);
         generateSensitivePdf(outputDir, `sensitive-${i+1}.pdf`);
