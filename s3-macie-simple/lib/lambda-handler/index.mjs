@@ -19,8 +19,8 @@ export const handler = async() => {
       clientToken: `macie-job-${Date.now()}`,
       description: "Macie job to detect sensitive data in the specified S3 bucket",
       initialRun: true,
-      jobType: "ONE_TIME",
-      managedDataIdentifierSelector: "ALL", // Use all default managed data identifiers
+      jobType: "SCHEDULED",
+      managedDataIdentifierSelector: "ALL",
       name: `MacieJob-${bucketName}-${Date.now()}`,
       s3JobDefinition: {
         bucketDefinitions: [
@@ -30,6 +30,9 @@ export const handler = async() => {
           },
         ],
       },
+      scheduleFrequency: {
+        dailySchedule: {}
+      },    
     };
 
     // Send the command to create the classification job

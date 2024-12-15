@@ -5,6 +5,10 @@ import * as macie from 'aws-cdk-lib/aws-macie';
 import { Role, ServicePrincipal, PolicyStatement, PolicyDocument } from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as snsSub from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 
 export class S3MacieSimpleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -14,7 +18,8 @@ export class S3MacieSimpleStack extends cdk.Stack {
       versioned: true,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
-      removalPolicy: cdk.RemovalPolicy.DESTROY
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
     const macieSession = new macie.CfnSession(this, 'MacieSession', {
@@ -72,6 +77,21 @@ export class S3MacieSimpleStack extends cdk.Stack {
       functionName: 'CreateMacieJob',
     });
 
+    const snsTopic = new sns.Topic(this, 'MacieFindingsTopic', {
+      displayName: 'Macie Findings Notifications',
+    });
+
+    snsTopic.addSubscription(new snsSub.EmailSubscription('estebanospinasaldarriaga@gmail.com'));
+
+    const eventRule = new events.Rule(this, 'MacieFindingsRule', {
+      eventPattern: {
+        source: ['aws.macie'],
+        detailType: ['Macie Finding']
+      }
+    });
+
+    eventRule.addTarget(new eventsTargets.SnsTopic(snsTopic));
+
     new cdk.CfnOutput(this, 'BucketName', {
       value: bucket.bucketName,
     });
@@ -82,6 +102,10 @@ export class S3MacieSimpleStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'LambdaFunctionName', {
       value: macieLambda.functionName,
+    });
+
+    new cdk.CfnOutput(this, 'SNSTopicArn', {
+      value: snsTopic.topicArn,
     });
   }
 }
