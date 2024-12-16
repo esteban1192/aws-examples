@@ -3,7 +3,6 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 
 export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -14,9 +13,19 @@ export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    const watchedBucket = new s3.Bucket(this, 'WatchedBucket', {
+    const watchedBucket1 = new s3.Bucket(this, 'WatchedBucket1', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+    });
+    const watchedBucket2 = new s3.Bucket(this, 'WatchedBucket2', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    const logGroup = new logs.LogGroup(this, 'TrailLogGroup', {
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      logGroupName: 'TrailLogGroup',
     });
 
     const dataEventTrail = new cloudtrail.Trail(this, 'DataEventTrail', {
@@ -25,16 +34,18 @@ export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
       managementEvents: cloudtrail.ReadWriteType.NONE,
       sendToCloudWatchLogs: true,
       isMultiRegionTrail: false,
+      cloudWatchLogGroup: logGroup
     });
 
-    const logGroup = dataEventTrail.logGroup as logs.LogGroup;
-
     dataEventTrail.addS3EventSelector(
-      [{ bucket: watchedBucket }],
-      { readWriteType: cloudtrail.ReadWriteType.ALL }
+      [{ bucket: watchedBucket1 }],
+      { readWriteType: cloudtrail.ReadWriteType.WRITE_ONLY }
+    );
+    dataEventTrail.addS3EventSelector(
+      [{ bucket: watchedBucket2 }],
+      { readWriteType: cloudtrail.ReadWriteType.WRITE_ONLY }
     );
 
-    // Create a Metric Filter for 'PutObject' events
     const metricFilter = new logs.MetricFilter(this, 'PutObjectMetricFilter', {
       logGroup,
       filterPattern: logs.FilterPattern.stringValue('$.eventName', '=', 'PutObject'),
@@ -42,9 +53,9 @@ export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
       metricName: 'PutObjectEvents',
       metricValue: '1',
       dimensions: {
-        'eventName': '$.eventName'
+        'BucketName': '$.requestParameters.bucketName'
       },
-      filterName: 'MultitrailTest'
+      filterName: 'PutObjectMetricFilter'
     });
   }
 }
