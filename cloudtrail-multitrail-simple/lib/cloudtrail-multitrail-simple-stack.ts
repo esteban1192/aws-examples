@@ -3,6 +3,9 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as sns_subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 
 export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -56,6 +59,42 @@ export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
         'BucketName': '$.requestParameters.bucketName'
       },
       filterName: 'PutObjectMetricFilter'
+    });
+
+    const mathExpression = new cloudwatch.MathExpression({
+      expression: '(bucket1Metric > 7) + (bucket2Metric > 7)',
+      usingMetrics: {
+        bucket1Metric: metricFilter.metric({
+          dimensionsMap: {
+            'BucketName': watchedBucket1.bucketName
+          },
+          statistic: cloudwatch.Stats.SUM
+        }),
+        bucket2Metric: metricFilter.metric({
+          dimensionsMap: {
+            'BucketName': watchedBucket2.bucketName
+          },
+          statistic: cloudwatch.Stats.SUM
+        })
+      },
+    });
+
+    const alarm = new cloudwatch.Alarm(this, 'Alarm', {
+      metric: mathExpression,
+      threshold: 1,
+      evaluationPeriods: 1,
+    });
+
+    const topic = new sns.Topic(this, 'AlarmNotificationTopic', {
+      displayName: 'Alarm Notification Topic',
+    });
+
+    topic.addSubscription(new sns_subscriptions.EmailSubscription('estebanospinasaldarriaga@gmail.com'));
+
+    alarm.addAlarmAction({
+      bind: () => ({
+        alarmActionArn: topic.topicArn,
+      }),
     });
   }
 }
