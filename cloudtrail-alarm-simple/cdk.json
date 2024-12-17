@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/cloudtrail-multitrail-simple.ts",
+  "app": "npx ts-node --prefer-ts-exts bin/cloudtrail-alarm-simple.ts",
   "watch": {
     "include": [
       "**"
