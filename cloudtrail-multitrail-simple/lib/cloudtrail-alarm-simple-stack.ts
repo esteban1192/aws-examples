@@ -16,7 +16,7 @@ export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
       logGroupName: 'TrailLogGroup',
     });
 
-    new cloudtrail.Trail(this, 'IamEventTrail', {
+    new cloudtrail.Trail(this, 'ManagementWriteEventsTrail', {
       includeGlobalServiceEvents: false,
       managementEvents: cloudtrail.ReadWriteType.WRITE_ONLY,
       sendToCloudWatchLogs: true,
@@ -24,31 +24,32 @@ export class CloudtrailMultitrailSimpleStack extends cdk.Stack {
       cloudWatchLogGroup: logGroup,
     });
 
-    const metricFilter = new logs.MetricFilter(this, 'IamChangeMetricFilter', {
+    const metricFilter = new logs.MetricFilter(this, 'LambdaChangeMetricFilter', {
       logGroup,
       filterPattern: logs.FilterPattern.stringValue('$.eventSource', '=', 'lambda.amazonaws.com'),
-      metricNamespace: 'IAMMetrics',
-      metricName: 'IamChanges',
+      metricNamespace: 'SandboxMetrics',
+      metricName: 'LambdaManagementChanges',
       metricValue: '1',
-      filterName: 'IamChangeMetricFilter',
+      filterName: 'LambdaManagementChangesMetricFilter',
       dimensions: {
-        EventSource: '$.eventSource'
+        eventSource: '$.eventSource'
       }
     });
 
-    const alarm = new cloudwatch.Alarm(this, 'IamChangeAlarm', {
+    const alarm = new cloudwatch.Alarm(this, 'LambdaChangeAlarm', {
       metric: metricFilter.metric({
         statistic: cloudwatch.Stats.SUM,
         dimensionsMap: {
-          EventSource: 'lambda.amazonaws.com'
+          eventSource: 'lambda.amazonaws.com'
         }
       }),
       threshold: 1,
       evaluationPeriods: 1,
+      alarmDescription: 'Alert when there is a lambda management event'
     });
 
-    const topic = new sns.Topic(this, 'IamChangeNotificationTopic', {
-      displayName: 'IAM Change Notification Topic',
+    const topic = new sns.Topic(this, 'LambdaChangeNotificationTopic', {
+      displayName: 'Lambda Change Notification Topic',
     });
 
     topic.addSubscription(new sns_subscriptions.EmailSubscription('estebanospinasaldarriaga@gmail.com'));
