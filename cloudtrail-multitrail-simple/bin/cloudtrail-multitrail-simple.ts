@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { CloudtrailMultitrailSimpleStack } from '../lib/cloudtrail-multitrail-simple-stack';
+import { CloudtrailMultitrailSimpleStack } from '../lib/cloudtrail-alarm-simple-stack';
 
 const app = new cdk.App();
 new CloudtrailMultitrailSimpleStack(app, 'CloudtrailMultitrailSimpleStack', {
