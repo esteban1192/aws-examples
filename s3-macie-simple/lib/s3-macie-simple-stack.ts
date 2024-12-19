@@ -11,8 +11,12 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 
 export class S3MacieSimpleStack extends cdk.Stack {
+  private email: string;
+
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    this.email = 'setyourownemail@example.com';
 
     const bucket = new Bucket(this, 'SensitiveDataBucket', {
       versioned: true,
@@ -81,7 +85,7 @@ export class S3MacieSimpleStack extends cdk.Stack {
       displayName: 'Macie Findings Notifications',
     });
 
-    snsTopic.addSubscription(new snsSub.EmailSubscription('estebanospinasaldarriaga@gmail.com'));
+    snsTopic.addSubscription(new snsSub.EmailSubscription(this.email));
 
     const eventRule = new events.Rule(this, 'MacieFindingsRule', {
       eventPattern: {
