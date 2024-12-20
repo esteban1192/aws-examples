@@ -4,6 +4,8 @@ import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
 
 export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
+  private globalCluster: aws_rds.CfnGlobalCluster;
+
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -27,12 +29,17 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
         subnetType: aws_ec2.SubnetType.PRIVATE_ISOLATED,
       },
       writer: aws_rds.ClusterInstance.provisioned('ClusterWriterInstance', {
-        instanceType: aws_ec2.InstanceType.of(aws_ec2.InstanceClass.R5, aws_ec2.InstanceSize.LARGE)
-      })
+        instanceType: aws_ec2.InstanceType.of(aws_ec2.InstanceClass.R5, aws_ec2.InstanceSize.LARGE),
+      }),
     });
 
-    const globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
+    this.globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
       sourceDbClusterIdentifier: mainCluster.clusterIdentifier,
-    });
+    })
+
+  }
+
+  public getGlobalCluster(): aws_rds.CfnGlobalCluster {
+    return this.globalCluster;
   }
 }
