@@ -2,25 +2,18 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
-import { clusterEngine } from './constants';
+import { clusterEngine, vpcConfig } from '../constants/constants';
 import { SecondaryClusterStack } from './secondary-cluster-stack';
 
-export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
-  private globalCluster: aws_rds.CfnGlobalCluster;
+interface GlobalDatabaseStackProps extends cdk.StackProps {
+  secondaryRegions: string[]
+}
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: GlobalDatabaseStackProps) {
     super(scope, id, props);
 
-    const vpc = new aws_ec2.Vpc(this, 'AuroraVpc', {
-      maxAzs: 2,
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'PrivateSubnet',
-          subnetType: aws_ec2.SubnetType.PRIVATE_ISOLATED,
-        },
-      ],
-    });
+    const vpc = new aws_ec2.Vpc(this, 'AuroraVpc', vpcConfig);
 
     const mainCluster = new aws_rds.DatabaseCluster(this, 'SourceDatabaseCluster', {
       engine: clusterEngine,
@@ -33,21 +26,22 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
       }),
     });
 
-    this.globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
+    const globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
       sourceDbClusterIdentifier: mainCluster.clusterIdentifier,
       globalClusterIdentifier: 'global-cluster'
     })
 
-    new SecondaryClusterStack(this, 'SecondaryClusterStackTest', {
-      env: {
-        region: 'us-east-2'
-      },
-      globalCluster: this.globalCluster
-    });
-
-  }
-
-  public getGlobalCluster(): aws_rds.CfnGlobalCluster {
-    return this.globalCluster;
+    props.secondaryRegions.forEach((secondaryRegion: string) => {
+      if (globalCluster.globalClusterIdentifier === undefined) {
+        throw new Error("Global Cluster Identifier needs to be provided");
+      }
+      const secondaryCluster = new SecondaryClusterStack(this, `SecondaryClusterStack-${secondaryRegion}`, {
+        env: {
+          region: secondaryRegion
+        },
+        globalClusterIdentifier: globalCluster.globalClusterIdentifier
+      });
+      secondaryCluster.addDependency(this);
+    })
   }
 }
