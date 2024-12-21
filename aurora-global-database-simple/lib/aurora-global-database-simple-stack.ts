@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
+import { clusterEngine } from './constants';
+import { SecondaryClusterStack } from './secondary-cluster-stack';
 
 export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
   private globalCluster: aws_rds.CfnGlobalCluster;
@@ -20,10 +22,8 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
       ],
     });
 
-    const mainCluster = new aws_rds.DatabaseCluster(this, 'DatabaseCluster', {
-      engine: aws_rds.DatabaseClusterEngine.auroraMysql({
-        version: aws_rds.AuroraMysqlEngineVersion.VER_3_08_0,
-      }),
+    const mainCluster = new aws_rds.DatabaseCluster(this, 'SourceDatabaseCluster', {
+      engine: clusterEngine,
       vpc: vpc,
       vpcSubnets: {
         subnetType: aws_ec2.SubnetType.PRIVATE_ISOLATED,
@@ -35,7 +35,15 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
 
     this.globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
       sourceDbClusterIdentifier: mainCluster.clusterIdentifier,
+      globalClusterIdentifier: 'global-cluster'
     })
+
+    new SecondaryClusterStack(this, 'SecondaryClusterStackTest', {
+      env: {
+        region: 'us-east-2'
+      },
+      globalCluster: this.globalCluster
+    });
 
   }
 

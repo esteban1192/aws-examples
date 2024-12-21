@@ -10,10 +10,3 @@ const globalDatabaseStack = new AuroraGlobalDatabaseSimpleStack(app, 'AuroraGlob
     region: 'us-east-1'
   }
 });
-
-new SecondaryClusterStack(app, 'SecondaryClusterStack', {
-  env: {
-    region: 'us-east-2'
-  },
-  globalCluster: globalDatabaseStack.getGlobalCluster()
-});
