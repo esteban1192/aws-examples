@@ -5,7 +5,7 @@ export const clusterEngine = aws_rds.DatabaseClusterEngine.auroraMysql({
     version: aws_rds.AuroraMysqlEngineVersion.VER_3_08_0,
 });
 
-export const vpcConfig = {
+export const vpcConfig: aws_ec2.VpcProps = {
     maxAzs: 2,
     subnetConfiguration: [
         {
@@ -13,5 +13,11 @@ export const vpcConfig = {
             name: 'PrivateSubnet',
             subnetType: aws_ec2.SubnetType.PRIVATE_ISOLATED,
         },
+        {
+            cidrMask: 24,
+            name: 'PublicSubnet',
+            subnetType: aws_ec2.SubnetType.PUBLIC,
+        },
     ],
+    natGateways: 0
 }
