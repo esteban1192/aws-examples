@@ -21,3 +21,8 @@ export const vpcConfig: aws_ec2.VpcProps = {
     ],
     natGateways: 0
 }
+
+const instanceClass = aws_ec2.InstanceClass.R5;
+const instanceSize = aws_ec2.InstanceSize.LARGE
+export const ec2InstanceType = aws_ec2.InstanceType.of(instanceClass, instanceSize)
+export const rdsInstanceType = `db.${instanceClass}.${instanceSize}`;

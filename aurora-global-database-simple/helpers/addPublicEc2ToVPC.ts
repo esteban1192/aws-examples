@@ -1,19 +1,7 @@
-import { 
-  Instance, 
-  InstanceType, 
-  Vpc, 
-  SubnetType, 
-  InstanceClass, 
-  InstanceSize, 
-  AmazonLinuxImage, 
-  AmazonLinuxGeneration, 
-  SecurityGroup, 
-  Port, 
-  UserData
-} from 'aws-cdk-lib/aws-ec2';
+import { Instance, InstanceType, Vpc, SubnetType, InstanceClass, InstanceSize, AmazonLinuxImage, AmazonLinuxGeneration, SecurityGroup, UserData } from 'aws-cdk-lib/aws-ec2';
 import { Role, ServicePrincipal, ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 
-export const addPublicEc2ToVpc = (vpc: Vpc): Instance => {
+export const addPublicEc2InstanceToVpc = (vpc: Vpc): Instance => {
   const instanceRole = new Role(vpc.stack, 'InstanceSSMRole', {
     assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
   });
@@ -23,7 +11,7 @@ export const addPublicEc2ToVpc = (vpc: Vpc): Instance => {
   const instanceSecurityGroup = new SecurityGroup(vpc.stack, 'InstanceSecurityGroup', {
     vpc,
     description: 'Security group for public EC2 instance',
-    allowAllOutbound: true, // Allow all outbound traffic
+    allowAllOutbound: true,
   });
 
   const userData = UserData.forLinux()

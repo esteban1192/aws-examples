@@ -7,7 +7,7 @@ import { SecondaryClusterStack } from '../lib/secondary-cluster-stack';
 const app = new cdk.App();
 const primaryRegion = 'us-east-1';
 const secondaryRegions = [
-  'sa-east-1',
+  // 'sa-east-1',
   'eu-west-2'
 ];
 
@@ -15,5 +15,6 @@ new AuroraGlobalDatabaseSimpleStack(app, 'AuroraGlobalDatabaseSimpleStack', {
   env: {
     region: primaryRegion
   },
-  secondaryRegions: secondaryRegions
+  secondaryRegions: secondaryRegions,
+  primaryRegion: primaryRegion
 });

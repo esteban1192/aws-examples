@@ -2,8 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
-import { clusterEngine, vpcConfig } from '../constants/constants';
-import { addPublicEc2ToVpc } from '../helpers/addPublicEc2ToVPC';
+import { clusterEngine, ec2InstanceType, rdsInstanceType, vpcConfig } from '../constants/constants';
+import { addPublicEc2InstanceToVpc } from '../helpers/addPublicEc2ToVPC';
 
 interface SecondaryClusterStackProps extends cdk.StackProps {
     globalClusterIdentifier: string;
@@ -16,7 +16,7 @@ export class SecondaryClusterStack extends cdk.Stack {
 
         const vpc = new aws_ec2.Vpc(this, 'SecondaryClusterVpc', vpcConfig);
 
-        const instance = addPublicEc2ToVpc(vpc);
+        const instance = addPublicEc2InstanceToVpc(vpc);
 
         const ec2InstanceSecurityGroup = instance.connections.securityGroups[0];
 
@@ -31,22 +31,22 @@ export class SecondaryClusterStack extends cdk.Stack {
 
         const cluster = new aws_rds.CfnDBCluster(this, 'Cluster', {
             globalClusterIdentifier: props.globalClusterIdentifier,
-            replicationSourceIdentifier: props.globalClusterArn,
             engine: clusterEngine.engineType,
             engineVersion: clusterEngine.engineVersion?.fullVersion,
             dbSubnetGroupName: subnetGroup.ref,
             vpcSecurityGroupIds: [clusterSecurityGroup.securityGroupId],
+            enableGlobalWriteForwarding: true,
         });
 
         clusterSecurityGroup.addIngressRule(
             ec2InstanceSecurityGroup,
-            aws_ec2.Port.tcp(3306), // Adjust port based on your Aurora engine
+            aws_ec2.Port.tcp(3306),
             'Allow EC2 instance to connect to Aurora Cluster'
         );
 
         const dbInstance = new aws_rds.CfnDBInstance(this, 'DBInstance', {
             dbClusterIdentifier: cluster.ref,
-            dbInstanceClass: 'db.r5.large',
+            dbInstanceClass: rdsInstanceType,
             engine: clusterEngine.engineType,
         });
 

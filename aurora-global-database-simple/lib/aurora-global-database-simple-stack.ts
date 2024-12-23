@@ -2,11 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
-import { clusterEngine, vpcConfig } from '../constants/constants';
+import { PrimaryClusterStack } from './primary-cluster-stack';
 import { SecondaryClusterStack } from './secondary-cluster-stack';
-import { addPublicEc2ToVpc } from '../helpers/addPublicEc2ToVPC';
+import { addPublicEc2InstanceToVpc } from '../helpers/addPublicEc2ToVPC';
 
 interface GlobalDatabaseStackProps extends cdk.StackProps {
+  primaryRegion: string,
   secondaryRegions: string[]
 }
 
@@ -14,54 +15,33 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: GlobalDatabaseStackProps) {
     super(scope, id, props);
 
-    const vpc = new aws_ec2.Vpc(this, 'AuroraVpc', vpcConfig);
-
-    const mainClusterSecurityGroup = new aws_ec2.SecurityGroup(this, 'MainClusterSecurityGroup', {
-      vpc,
-      description: 'Security group for Aurora main cluster',
-      allowAllOutbound: true,
+    const primaryClusterStack = new PrimaryClusterStack(this, 'PrimaryClusterStack', {
+      env: {
+        region: props.primaryRegion
+      }
     });
 
-    const mainCluster = new aws_rds.DatabaseCluster(this, 'SourceDatabaseCluster', {
-      engine: clusterEngine,
-      vpc: vpc,
-      vpcSubnets: {
-        subnetType: aws_ec2.SubnetType.PRIVATE_ISOLATED,
-      },
-      writer: aws_rds.ClusterInstance.provisioned('ClusterWriterInstance', {
-        instanceType: aws_ec2.InstanceType.of(aws_ec2.InstanceClass.R5, aws_ec2.InstanceSize.LARGE),
-      }),
-      securityGroups: [mainClusterSecurityGroup],
-    });
+    const { primaryCluster } = primaryClusterStack;
 
     const globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
-      sourceDbClusterIdentifier: mainCluster.clusterIdentifier,
+      sourceDbClusterIdentifier: primaryCluster.clusterIdentifier,
       globalClusterIdentifier: 'global-cluster'
     });
-
-    const instance = addPublicEc2ToVpc(vpc);
-
-    const ec2InstanceSecurityGroup = instance.connections.securityGroups[0];
-
-    mainClusterSecurityGroup.addIngressRule(
-      ec2InstanceSecurityGroup,
-      aws_ec2.Port.tcp(3306), // Adjust port based on your Aurora engine
-      'Allow EC2 instance to connect to Aurora Cluster'
-    );
+    globalCluster.node.addDependency(primaryClusterStack)
 
     props.secondaryRegions.forEach((secondaryRegion: string) => {
       if (globalCluster.globalClusterIdentifier === undefined) {
         throw new Error("Global Cluster Identifier needs to be provided");
       }
-      const secondaryCluster = new SecondaryClusterStack(this, `SecondaryClusterStack-${secondaryRegion}`, {
+      const secondaryClusterStack = new SecondaryClusterStack(this, `SecondaryClusterStack-${secondaryRegion}`, {
         env: {
           region: secondaryRegion
         },
         globalClusterIdentifier: globalCluster.globalClusterIdentifier,
-        globalClusterArn: mainCluster.clusterArn,
+        globalClusterArn: primaryCluster.clusterArn,
         crossRegionReferences: true
       });
-      secondaryCluster.addDependency(this);
+      secondaryClusterStack.node.addDependency(globalCluster);
     });
   }
 }
