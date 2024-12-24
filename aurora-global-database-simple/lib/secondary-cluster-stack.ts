@@ -2,12 +2,11 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
-import { clusterEngine, ec2InstanceType, rdsInstanceType, vpcConfig } from '../constants/constants';
+import { clusterEngine, rdsInstanceType, vpcConfig } from '../constants/constants';
 import { addPublicEc2InstanceToVpc } from '../helpers/addPublicEc2ToVPC';
 
 interface SecondaryClusterStackProps extends cdk.StackProps {
     globalClusterIdentifier: string;
-    globalClusterArn: string;
 }
 
 export class SecondaryClusterStack extends cdk.Stack {
@@ -29,6 +28,14 @@ export class SecondaryClusterStack extends cdk.Stack {
             vpc,
         });
 
+        const parameterGroup = new aws_rds.CfnDBClusterParameterGroup(this, 'SecondaryClusterParameterGroup', {
+            description: 'write forwarding parameter group',
+            family: clusterEngine.parameterGroupFamily ?? '',
+            parameters: {
+                aurora_replica_read_consistency: 'SESSION'
+            }
+        })
+
         const cluster = new aws_rds.CfnDBCluster(this, 'Cluster', {
             globalClusterIdentifier: props.globalClusterIdentifier,
             engine: clusterEngine.engineType,
@@ -36,7 +43,9 @@ export class SecondaryClusterStack extends cdk.Stack {
             dbSubnetGroupName: subnetGroup.ref,
             vpcSecurityGroupIds: [clusterSecurityGroup.securityGroupId],
             enableGlobalWriteForwarding: true,
+            dbClusterParameterGroupName: parameterGroup.ref,
         });
+        cluster.node.addDependency(parameterGroup);
 
         clusterSecurityGroup.addIngressRule(
             ec2InstanceSecurityGroup,

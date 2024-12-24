@@ -1,10 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as aws_rds from 'aws-cdk-lib/aws-rds';
-import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
 import { PrimaryClusterStack } from './primary-cluster-stack';
 import { SecondaryClusterStack } from './secondary-cluster-stack';
-import { addPublicEc2InstanceToVpc } from '../helpers/addPublicEc2ToVPC';
 
 interface GlobalDatabaseStackProps extends cdk.StackProps {
   primaryRegion: string,
@@ -25,7 +23,8 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
 
     const globalCluster = new aws_rds.CfnGlobalCluster(this, 'GlobalCluster', {
       sourceDbClusterIdentifier: primaryCluster.clusterIdentifier,
-      globalClusterIdentifier: 'global-cluster'
+      globalClusterIdentifier: 'global-cluster',
+      deletionProtection: false
     });
     globalCluster.node.addDependency(primaryClusterStack)
 
@@ -38,7 +37,6 @@ export class AuroraGlobalDatabaseSimpleStack extends cdk.Stack {
           region: secondaryRegion
         },
         globalClusterIdentifier: globalCluster.globalClusterIdentifier,
-        globalClusterArn: primaryCluster.clusterArn,
         crossRegionReferences: true
       });
       secondaryClusterStack.node.addDependency(globalCluster);

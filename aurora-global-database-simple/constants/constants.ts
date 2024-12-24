@@ -2,7 +2,7 @@ import * as aws_rds from 'aws-cdk-lib/aws-rds';
 import * as aws_ec2 from 'aws-cdk-lib/aws-ec2';
 
 export const clusterEngine = aws_rds.DatabaseClusterEngine.auroraMysql({
-    version: aws_rds.AuroraMysqlEngineVersion.VER_3_08_0,
+    version: aws_rds.AuroraMysqlEngineVersion.VER_3_07_1,
 });
 
 export const vpcConfig: aws_ec2.VpcProps = {
