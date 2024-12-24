@@ -44,6 +44,7 @@ export class SecondaryClusterStack extends cdk.Stack {
             vpcSecurityGroupIds: [clusterSecurityGroup.securityGroupId],
             enableGlobalWriteForwarding: true,
             dbClusterParameterGroupName: parameterGroup.ref,
+            deletionProtection: false,
         });
         cluster.node.addDependency(parameterGroup);
 
