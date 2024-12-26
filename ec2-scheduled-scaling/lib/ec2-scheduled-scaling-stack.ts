@@ -16,6 +16,7 @@ export class Ec2ScheduledScalingStack extends cdk.Stack {
 
     const vpc = new ec2.Vpc(this, 'MyVpc', {
       maxAzs: 2,
+      natGateways: 1
     });
 
     const ami = new ec2.AmazonLinuxImage({
@@ -40,22 +41,23 @@ export class Ec2ScheduledScalingStack extends cdk.Stack {
       targetUtilizationPercent: 50
     });
 
-    // Times are in UTC+0. Adjust the cron schedule for your local timezone.
+    const timeZone = 'America/Bogota' // Set your own
     asg.scaleOnSchedule('ScaleUpMorning', {
       schedule: autoscaling.Schedule.cron({
         hour: '8',
         minute: '30',
       }),
       minCapacity: 3,
+      timeZone: timeZone,
     });
 
-    // Times are in UTC+0. Adjust the cron schedule for your local timezone.
     asg.scaleOnSchedule('ScaleDownEvening', {
       schedule: autoscaling.Schedule.cron({
         hour: '5',
         minute: '30',
       }),
       minCapacity: 1,
+      timeZone: timeZone
     });
   }
 }
