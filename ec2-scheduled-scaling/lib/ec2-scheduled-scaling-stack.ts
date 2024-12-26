@@ -19,13 +19,11 @@ export class Ec2ScheduledScalingStack extends cdk.Stack {
       natGateways: 1
     });
 
+    const ec2UserData = ec2.UserData.forLinux();
+    ec2UserData.addCommands('sudo dnf install -y stress');
     const ami = new ec2.AmazonLinuxImage({
       generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023,
-      userData: ec2.UserData.custom(`
-        #!/bin/bash
-        sudo amazon-linux-extras install epel
-        sudo yum install -y stress
-      `),
+      userData: ec2UserData
     });
 
     const asg = new autoscaling.AutoScalingGroup(this, 'MyASG', {
@@ -44,8 +42,8 @@ export class Ec2ScheduledScalingStack extends cdk.Stack {
     const timeZone = 'America/Bogota' // Set your own
     asg.scaleOnSchedule('ScaleUpMorning', {
       schedule: autoscaling.Schedule.cron({
-        hour: '8',
-        minute: '30',
+        hour: '22',
+        minute: '15',
       }),
       minCapacity: 3,
       timeZone: timeZone,
@@ -53,8 +51,8 @@ export class Ec2ScheduledScalingStack extends cdk.Stack {
 
     asg.scaleOnSchedule('ScaleDownEvening', {
       schedule: autoscaling.Schedule.cron({
-        hour: '5',
-        minute: '30',
+        hour: '22',
+        minute: '25',
       }),
       minCapacity: 1,
       timeZone: timeZone
