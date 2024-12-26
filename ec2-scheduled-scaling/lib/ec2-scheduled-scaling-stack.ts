@@ -40,18 +40,20 @@ export class Ec2ScheduledScalingStack extends cdk.Stack {
       targetUtilizationPercent: 50
     });
 
+    // Times are in UTC+0. Adjust the cron schedule for your local timezone.
     asg.scaleOnSchedule('ScaleUpMorning', {
       schedule: autoscaling.Schedule.cron({
-        hour: '0',
-        minute: '40',
+        hour: '8',
+        minute: '30',
       }),
       minCapacity: 3,
     });
 
+    // Times are in UTC+0. Adjust the cron schedule for your local timezone.
     asg.scaleOnSchedule('ScaleDownEvening', {
       schedule: autoscaling.Schedule.cron({
-        hour: '0',
-        minute: '50',
+        hour: '5',
+        minute: '30',
       }),
       minCapacity: 1,
     });
