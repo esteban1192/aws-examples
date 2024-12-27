@@ -2,8 +2,8 @@ import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as waf from 'aws-cdk-lib/aws-wafv2';
-import * as core from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as path from 'path';
 
 export class WafSqlInjectionProtectionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -12,14 +12,14 @@ export class WafSqlInjectionProtectionStack extends cdk.Stack {
     const myLambda = new lambda.Function(this, 'MyLambdaFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('lambda-function')
+      code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-function'))
     });
 
     const api = new apigw.RestApi(this, 'MyApi');
     const vulnerableEndpointResource = api.root.addResource('vulnerable-endpoint');
-    vulnerableEndpointResource.addMethod('GET', new apigw.LambdaIntegration(myLambda));
+    vulnerableEndpointResource.addMethod('POST', new apigw.LambdaIntegration(myLambda));
 
-    new waf.CfnWebACL(this, 'MyWebACL', {
+    const webAcl = new waf.CfnWebACL(this, 'MyWebACL', {
       defaultAction: {
         allow: {}
       },
@@ -34,12 +34,24 @@ export class WafSqlInjectionProtectionStack extends cdk.Stack {
               fieldToMatch: {
                 jsonBody: {
                   matchPattern: {
-                    all: 'ALL'
+                    all: {}
                   },
                   matchScope: 'VALUE'
                 }
               },
-              textTransformations: [],
+              textTransformations: [
+                {
+                  priority: 1,
+                  type: 'NONE',
+                }
+              ],
+            }
+          },
+          action: {
+            block: {
+              customResponse: {
+                responseCode: 403
+              }
             }
           },
           visibilityConfig: {
@@ -51,9 +63,15 @@ export class WafSqlInjectionProtectionStack extends cdk.Stack {
       ],
       visibilityConfig: {
         cloudWatchMetricsEnabled: false,
-        metricName: 'SQLInjection',
+        metricName: 'WebACL',
         sampledRequestsEnabled: false
       }
     });
+
+    const aclAssociation = new waf.CfnWebACLAssociation(this, 'ApiGatewayWafAssociation', {
+      resourceArn: api.deploymentStage.stageArn,
+      webAclArn: webAcl.attrArn
+    });
+    aclAssociation.node.addDependency(api);
   }
 }
