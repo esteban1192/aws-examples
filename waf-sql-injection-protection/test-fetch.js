@@ -5,7 +5,7 @@ async function testVulnerableEndpoint() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ param: "Wazaaaa" })
+      body: JSON.stringify({ param: "' OR 1=1 --" })
     });
 
     console.log("Status:", response.status);
