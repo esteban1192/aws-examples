@@ -25,6 +25,12 @@ export class WafSqlInjectionProtectionStack extends cdk.Stack {
       },
       scope: 'REGIONAL',
       name: 'MyWebACL',
+      customResponseBodies: {
+        blocked: {
+          contentType: "APPLICATION_JSON",
+          content: JSON.stringify({ error: "Request blocked by waf" }),
+        }
+      },
       rules: [
         {
           name: 'SQLInjectionRule',
@@ -40,27 +46,26 @@ export class WafSqlInjectionProtectionStack extends cdk.Stack {
                 }
               },
               textTransformations: [
-                {
-                  priority: 1,
-                  type: 'NONE',
-                }
-              ],
+                { priority: 0, type: 'URL_DECODE' },
+                { priority: 1, type: 'LOWERCASE' }
+              ]
             }
           },
           action: {
             block: {
               customResponse: {
-                responseCode: 403
+                responseCode: 403,
+                customResponseBodyKey: 'blocked'
               }
             }
           },
           visibilityConfig: {
-            cloudWatchMetricsEnabled: false,
+            cloudWatchMetricsEnabled: true,
             metricName: 'SQLInjection',
-            sampledRequestsEnabled: false
+            sampledRequestsEnabled: true
           }
         }
-      ],
+      ],      
       visibilityConfig: {
         cloudWatchMetricsEnabled: false,
         metricName: 'WebACL',
