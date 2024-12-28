@@ -9,10 +9,16 @@ export class WafSqlInjectionProtectionStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const sqlite3LayerVersion = new lambda.LayerVersion(this, 'SQLite3LayerVersion', {
+      code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-function', 'layer-version'))
+    })
     const myLambda = new lambda.Function(this, 'MyLambdaFunction', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-function'))
+      code: lambda.Code.fromAsset(path.join(__dirname, 'lambda-function')),
+      layers: [
+        sqlite3LayerVersion
+      ]
     });
 
     const api = new apigw.RestApi(this, 'MyApi');
