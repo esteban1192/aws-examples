@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam'
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -40,11 +41,32 @@ export class S3VpcGatewayEndpointStack extends cdk.Stack {
 
     const s3BucketEndpoint = new ec2.GatewayVpcEndpoint(this, 'VpcEndpoint', {
       service: ec2.GatewayVpcEndpointAwsService.S3,
-      vpc: vpc
+      vpc: vpc,
     });
+    
+    console.log("bucketarn", bucket.bucketArn);
+    
 
-    s3BucketEndpoint.addToPolicy({
-      
-    })
+    /**
+     * https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-access.html
+     * With gateway endpoints, the Principal element must be set to *. To specify a principal, use the aws:PrincipalArn condition key.
+     */
+    s3BucketEndpoint.addToPolicy(
+      new iam.PolicyStatement({
+        principals: [new iam.StarPrincipal()],
+        actions: ['s3:GetObject', 's3:ListBucket'],
+        effect: iam.Effect.ALLOW,
+        resources: [
+          `${bucket.bucketArn}`,
+          `${bucket.bucketArn}/*`,
+        ],
+        conditions: {
+          StringEquals: {
+            'aws:PrincipalArn': lambdaFunction.functionArn,
+          },
+        },
+      })
+    );
+    
   }
 }
