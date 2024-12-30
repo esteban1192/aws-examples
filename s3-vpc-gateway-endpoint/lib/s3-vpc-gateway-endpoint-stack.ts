@@ -28,27 +28,10 @@ export class S3VpcGatewayEndpointStack extends cdk.Stack {
 
     const lambdaRole = new iam.Role(this, 'LambdaExecutionRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      inlinePolicies: {
-        S3AccessPolicy: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              actions: ['s3:GetObject', 's3:ListBucket'],
-              resources: [
-                `${bucket.bucketArn}`,
-                `${bucket.bucketArn}/*`,
-              ],
-            }),
-          ],
-        }),
-        CloudWatchLogsPolicy: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-              resources: ['arn:aws:logs:*:*:*'],
-            }),
-          ],
-        }),    
-      },
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3ReadOnlyAccess'),
+        iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess')
+      ],
     });
 
     new lambda.Function(this, 'MyLambda', {
