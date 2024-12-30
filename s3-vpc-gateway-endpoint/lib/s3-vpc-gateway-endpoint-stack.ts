@@ -40,6 +40,14 @@ export class S3VpcGatewayEndpointStack extends cdk.Stack {
             }),
           ],
         }),
+        CloudWatchLogsPolicy: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
+              resources: ['arn:aws:logs:*:*:*'],
+            }),
+          ],
+        }),    
       },
     });
 

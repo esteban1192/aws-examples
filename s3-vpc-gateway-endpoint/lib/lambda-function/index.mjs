@@ -20,7 +20,7 @@ export const handler = async (event) => {
     const command = new GetObjectCommand(input);
     const response = await client.send(command);
 
-    console.log("Successfull response:", JSON.stringify(response));
+    console.log("Successfull response:", JSON.stringify(response.$metadata));
 
     return {
       statusCode: 200,
