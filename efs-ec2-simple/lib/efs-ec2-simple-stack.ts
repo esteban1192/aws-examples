@@ -3,13 +3,14 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as efs from 'aws-cdk-lib/aws-efs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as autoscaling from 'aws-cdk-lib/aws-autoscaling'
 
 export class EfsEc2SimpleStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, 'Vpc', {
-      maxAzs: 2,
+      maxAzs: 3,
       subnetConfiguration: [
         {
           name: 'IsolatedSubnet',
@@ -52,7 +53,8 @@ export class EfsEc2SimpleStack extends cdk.Stack {
       'sudo dnf update -y',
       'sudo dnf install -y amazon-efs-utils',
       'mkdir -p /mnt/efs',
-      `sudo mount -t efs -o tls -o iam ${fileSystem.fileSystemId}:/ /mnt/efs/`
+      `sudo mount -t efs -o tls -o iam ${fileSystem.fileSystemId}:/ /mnt/efs/`,
+      'sudo chown ec2-user /mnt/efs'
     );
 
     const instancesRole = new iam.Role(this, 'SSMRole', {
@@ -61,18 +63,21 @@ export class EfsEc2SimpleStack extends cdk.Stack {
     instancesRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'));
     fileSystem.grant(instancesRole, 'elasticfilesystem:ClientMount', 'elasticfilesystem:ClientWrite');
 
-    vpc.publicSubnets.forEach((subnet: ec2.ISubnet, index: number) => {
-      new ec2.Instance(this, `Instance${index + 1}`, {
-        vpc,
-        vpcSubnets: { subnets: [subnet] },
-        instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
-        machineImage: new ec2.AmazonLinuxImage({
-          generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023
-        }),
-        securityGroup: instancesSecurityGroup,
-        userData,
-        role: instancesRole
-      });
+    const autoScalingGroup = new autoscaling.AutoScalingGroup(this, `AutoScalingGroup`, {
+      vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC
+      },
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+      machineImage: new ec2.AmazonLinuxImage({
+        generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023
+      }),
+      securityGroup: instancesSecurityGroup,
+      role: instancesRole,
+      minCapacity: 3,
+      maxCapacity: 3,
+      userData: userData
     });
-  }
+    autoScalingGroup.node.addDependency(fileSystem);
+  };
 }
