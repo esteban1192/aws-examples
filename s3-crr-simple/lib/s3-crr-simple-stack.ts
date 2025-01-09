@@ -20,8 +20,8 @@ export class S3CrrSimpleStack extends cdk.Stack {
   private createSourceBucket(): s3.Bucket {
     return new s3.Bucket(this, 'SourceBucket', {
       versioned: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // For development; remove in production
-      autoDeleteObjects: true, // For development; remove in production
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
       bucketName: `source-bucket-${this.account}`
     });
   }
@@ -32,23 +32,17 @@ export class S3CrrSimpleStack extends cdk.Stack {
       roleName: 'S3CRRRole'
     });
 
-    // Add permissions for replication
     this.addReplicationPermissions(crrRole, sourceBucket, destinationBucket);
-
-    // Grant the role necessary access to the buckets
-    sourceBucket.grantRead(crrRole);
-    destinationBucket.grantWrite(crrRole);
 
     return crrRole;
   }
-
   private addReplicationPermissions(crrRole: iam.Role, sourceBucket: s3.Bucket, destinationBucket: s3.Bucket): void {
     crrRole.addToPolicy(new iam.PolicyStatement({
       actions: [
         's3:GetReplicationConfiguration',
         's3:ListBucket',
       ],
-      resources: [`${sourceBucket.bucketArn}`], // List and get replication config for source bucket
+      resources: [`${sourceBucket.bucketArn}`],
     }));
 
     crrRole.addToPolicy(new iam.PolicyStatement({
@@ -57,7 +51,7 @@ export class S3CrrSimpleStack extends cdk.Stack {
         's3:GetObjectVersionAcl',
         's3:GetObjectVersionTagging',
       ],
-      resources: [`${sourceBucket.bucketArn}/*`], // Get object version metadata for source bucket
+      resources: [`${sourceBucket.bucketArn}/*`],
     }));
 
     crrRole.addToPolicy(new iam.PolicyStatement({
@@ -66,13 +60,11 @@ export class S3CrrSimpleStack extends cdk.Stack {
         's3:ReplicateDelete',
         's3:ReplicateTags',
       ],
-      resources: [`${destinationBucket.bucketArn}/*`], // Allow replication to destination bucket
+      resources: [`${destinationBucket.bucketArn}/*`],
     }));
   }
 
   private setupBucketReplication(sourceBucket: s3.Bucket, destinationBucket: s3.Bucket, crrRole: iam.Role): void {
-    // Using the CloudFormation (Cfn) resource to directly configure replication
-    // because the higher-level S3 construct does not expose the replication configuration directly.
     const sourceBucketCfn = sourceBucket.node.defaultChild as s3.CfnBucket;
     sourceBucketCfn.replicationConfiguration = {
       role: crrRole.roleArn,
