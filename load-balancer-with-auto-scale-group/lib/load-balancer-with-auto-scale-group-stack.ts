@@ -19,8 +19,6 @@ export class LoadBalancerWithAutoScaleGroupStack extends cdk.Stack {
 
     this.setupAlbListenerAndTargets(alb, asg);
 
-    this.addVpcEndpoints(vpc);
-
     this.outputAlbDns(alb);
   }
 
@@ -38,13 +36,6 @@ export class LoadBalancerWithAutoScaleGroupStack extends cdk.Stack {
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
         },
       ],
-    });
-  }
-
-  private addVpcEndpoints(vpc: ec2.Vpc): void {
-    new ec2.InterfaceVpcEndpoint(this, 'SSMEndpoint', {
-      vpc,
-      service: ec2.InterfaceVpcEndpointAwsService.SSM,
     });
   }
 
