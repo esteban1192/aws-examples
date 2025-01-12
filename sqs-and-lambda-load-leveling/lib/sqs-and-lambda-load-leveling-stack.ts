@@ -19,11 +19,11 @@ export class SqsAndLambdaLoadLevelingStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, 'lambda')),
-      reservedConcurrentExecutions: 10,
+      reservedConcurrentExecutions: 1,
     });
 
     lambdaFunction.addEventSource(new lambdaEventSources.SqsEventSource(sqsQueue, {
-      batchSize: 5,
+      batchSize: 1,
     }));
 
     const integrationRole = new iam.Role(this, 'integration-role', {
