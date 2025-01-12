@@ -3,6 +3,7 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 export class RdsMultiAzDeploymentSimpleStack extends cdk.Stack {
@@ -13,9 +14,7 @@ export class RdsMultiAzDeploymentSimpleStack extends cdk.Stack {
     const dbCredentials = this.createDatabaseCredentials();
     const dbSecurityGroup = this.createDbSecurityGroup(vpc);
     this.createRdsInstance(vpc, dbCredentials, dbSecurityGroup);
-    const ec2SecurityGroup = this.createEc2SecurityGroup(vpc);
-    const ec2Instance = this.createEc2Instance(vpc, ec2SecurityGroup);
-    this.createInstanceConnectEndpoint(vpc, ec2SecurityGroup);
+    const ec2Instance = this.createEc2Instance(vpc);
 
     this.createOutputs(dbCredentials, ec2Instance);
   }
@@ -83,26 +82,19 @@ export class RdsMultiAzDeploymentSimpleStack extends cdk.Stack {
       databaseName: 'MyDatabase',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       deletionProtection: false,
+      deleteAutomatedBackups: true,
+      backupRetention: cdk.Duration.days(0)
     });
   }
 
-  private createEc2SecurityGroup(vpc: ec2.Vpc): ec2.SecurityGroup {
-    const ec2SecurityGroup = new ec2.SecurityGroup(this, 'Ec2SecurityGroup', {
-      vpc,
-      description: 'Allow SSH access',
-      allowAllOutbound: true,
+  private createEc2Instance(vpc: ec2.Vpc): ec2.Instance {
+    const role = new iam.Role(this, 'Ec2InstanceSSMRole', {
+      assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
+      ],
     });
 
-    ec2SecurityGroup.addIngressRule(
-      ec2.Peer.ipv4(vpc.vpcCidrBlock),
-      ec2.Port.tcp(22),
-      'Allow SSH access within VPC'
-    );
-
-    return ec2SecurityGroup;
-  }
-
-  private createEc2Instance(vpc: ec2.Vpc, ec2SecurityGroup: ec2.SecurityGroup): ec2.Instance {
     const ec2UserData = ec2.UserData.forLinux();
     ec2UserData.addCommands('sudo dnf install -y mariadb105');
 
@@ -111,26 +103,9 @@ export class RdsMultiAzDeploymentSimpleStack extends cdk.Stack {
       machineImage: new ec2.AmazonLinuxImage({ generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023 }),
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      securityGroup: ec2SecurityGroup,
       userData: ec2UserData,
+      role
     });
-  }
-
-  private createInstanceConnectEndpoint(vpc: ec2.Vpc, ec2SecurityGroup: ec2.SecurityGroup): ec2.CfnInstanceConnectEndpoint {
-    const instanceConnectSg = new ec2.SecurityGroup(this, 'InstanceConnectSG', {
-      vpc,
-      description: 'Security group for Instance Connect Endpoint',
-    });
-
-    const instanceConnectEndpoint = new ec2.CfnInstanceConnectEndpoint(this, 'MyCfnInstanceConnectEndpoint', {
-      subnetId: vpc.privateSubnets[0].subnetId,
-      securityGroupIds: [instanceConnectSg.securityGroupId],
-    });
-
-    instanceConnectEndpoint.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
-    ec2SecurityGroup.addIngressRule(instanceConnectSg, ec2.Port.tcp(22));
-
-    return instanceConnectEndpoint;
   }
 
   private createOutputs(dbCredentials: secretsmanager.Secret, ec2Instance: ec2.Instance) {
